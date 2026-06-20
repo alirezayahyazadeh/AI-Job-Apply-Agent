@@ -1,90 +1,77 @@
 import os
-import time
+from dotenv import load_dotenv
+from google import genai
 
-# 1. SECURITY FEATURE (Required by Kaggle)
-# Decoupling sensitive API tokens from code using environmental variables
-API_KEY = os.getenv("GEMINI_API_KEY", "MOCK_KEY_FOR_JUDGES_PROMPT")
+# Load API Key securely
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-# 2. AGENT SKILLS / TOOLS (Required by Kaggle)
-def mock_job_scraper(keyword):
-    """Tool: Simulates fetching live job postings from job boards."""
-    print(f"[Tool] Querying job boards for: '{keyword}'...")
-    time.sleep(1)
-    return {
-        "title": "AI Agent Developer",
-        "company": "NextGen AI Solutions",
-        "description": "We are seeking a Python developer experienced in building Multi-Agent architectures, LLM orchestration, and prompt engineering."
-    }
+# ============ TOOLS (Agent Skills) ============
 
-def read_user_resume():
-    """Tool: Simulates securely parsing a local profile or CV document."""
-    return "Candidate Name: Alireza. Core Technical Skills: Python engineering, Machine Learning workflows, Multi-Agent systems development."
+def search_jobs(keyword: str) -> str:
+    """Tool: Search for job listings based on keyword"""
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"Generate 2 realistic job listings for: {keyword}. Include title, company, and requirements."
+    )
+    return response.text
 
-# 3. MULTI-AGENT ARCHITECTURE (Required by Kaggle)
+def analyze_resume(job_description: str) -> str:
+    """Tool: Analyze resume match against job description"""
+    resume = "Skills: Python, AI Agents, Machine Learning, REST APIs"
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"Score this resume (0-100) against this job:\nResume: {resume}\nJob: {job_description}\nGive score and reason."
+    )
+    return response.text
+
+def generate_cover_letter(job_title: str, company: str) -> str:
+    """Tool: Generate personalized cover letter"""
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"Write a short professional cover letter for {job_title} at {company}."
+    )
+    return response.text
+
+# ============ AGENTS ============
+
 class JobHunterAgent:
-    def __init__(self):
-        self.name = "Job Hunter Agent"
-
-    def execute(self, job_keyword):
-        print(f"\n[{self.name}] Actively searching for tailored openings...")
-        return mock_job_scraper(job_keyword)
+    def run(self, keyword):
+        print("\n[Agent 1: Job Hunter] Searching for jobs...")
+        result = search_jobs(keyword)
+        print(result)
+        return result
 
 class MatchmakerAgent:
-    def __init__(self):
-        self.name = "Matchmaker Agent"
-
-    def execute(self, resume_content, target_job_desc):
-        print(f"\n[{self.name}] Assessing alignment score and extracting missing skills...")
-        # Simulating cross-reference logical evaluation
-        time.sleep(1)
-        fit_score = 88 
-        return fit_score
+    def run(self, job_description):
+        print("\n[Agent 2: Matchmaker] Analyzing resume match...")
+        result = analyze_resume(job_description)
+        print(result)
+        return result
 
 class ApplierAgent:
-    def __init__(self):
-        self.name = "Applier Agent"
+    def run(self, job_title, company):
+        print("\n[Agent 3: Applier] Generating cover letter...")
+        result = generate_cover_letter(job_title, company)
+        print(result)
+        return result
 
-    def execute(self, matched_job, resume_data):
-        print(f"\n[{self.name}] Generating contextual cover letter assets...")
-        time.sleep(1)
-        cover_letter = (
-            f"Dear Hiring Team at {matched_job['company']},\n\n"
-            f"I am writing to express my strong interest in the {matched_job['title']} position. "
-            f"Based on my profile ({resume_data[:50]}...), I am confident that my specialized skills in "
-            f"autonomous AI agents make me an ideal match for your current projects.\n\n"
-            f"Best regards,\nAlireza"
-        )
-        return cover_letter
+# ============ MAIN PIPELINE ============
 
-# AGENT ORCHESTRATION PIPELINE
-def run_autonomous_application_workflow():
-    print("="*60)
-    print("      LAUNCHING AUTONOMOUS JOB APPLICATION AI SYSTEM      ")
-    print("="*60)
-    
-    # Initialize our system actors
+def run_pipeline():
+    print("=" * 60)
+    print("   AUTO-APPLY AI AGENT - Powered by Google Gemini   ")
+    print("=" * 60)
+
     hunter = JobHunterAgent()
     matchmaker = MatchmakerAgent()
     applier = ApplierAgent()
-    
-    # Stage 1: Find target listings
-    found_job = hunter.execute("AI Agent Developer")
-    print(f"-> Found Position: '{found_job['title']}' at {found_job['company']}.")
-    
-    # Stage 2: Profile evaluation
-    user_cv = read_user_resume()
-    alignment_score = matchmaker.execute(user_cv, found_job["description"])
-    print(f"-> Alignment Assessment Completed. Core Match Score: {alignment_score}%")
-    
-    # Stage 3: Dynamic conditional action execution
-    if alignment_score >= 75:
-        print("\n[Decision Engine] Match exceeds threshold. Initiating custom asset creation...")
-        final_letter = applier.execute(found_job, user_cv)
-        print("\n" + "="*20 + " GENERATED COVER LETTER " + "="*20)
-        print(final_letter)
-        print("="*64)
-    else:
-        print("\n[Decision Engine] Alignment too low. Aborting pipeline submission.")
+
+    jobs = hunter.run("AI Engineer")
+    matchmaker.run(jobs)
+    applier.run("AI Engineer", "Google DeepMind")
+
+    print("\n[Pipeline Complete] Application package ready!")
 
 if __name__ == "__main__":
-    run_autonomous_application_workflow()
+    run_pipeline()
